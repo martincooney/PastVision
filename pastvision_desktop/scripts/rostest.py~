@@ -1,0 +1,8 @@
+import rospy
+
+def main():
+    rospy.init_node('myrostest', anonymous=True)
+
+if __name__ == '__main__':
+    main()
+

@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+import cv2
+import numpy as np
+import datetime
+import sys
+
+now=datetime.datetime.now()
+
+#objects1-rgb.avi 5-6/touch_materials
+
+basename = '../../data/objects1'
+if len(sys.argv) > 1:
+	basename = sys.argv[1]
+
+
+motherFile = "%s-thermal.dat" % basename
+thermalFileName1 = "%s-thermal1.avi" % basename
+thermalFileName2 = "%s-thermal2.avi" % basename
+thermalFileName3 = "%s-thermal3.avi" % basename
+
+#fileEnd = "%d-%d-%d_%d-%d-%d" % (now.year, now.month, now.day, now.hour, now.minute, now.second)
+#thermalFileName1 = "raw-data/%s-thermal1.avi" % fileEnd
+#thermalFileName2 = "raw-data/%s-thermal2.avi" % fileEnd
+#thermalFileName3 = "raw-data/%s-thermal3.avi" % fileEnd
+
+fourcc = cv2.cv.CV_FOURCC(*'XVID') #old opencv...
+#fourcc = cv2.VideoWriter_fourcc(*'XVID')
+
+out_thermal1= cv2.VideoWriter(thermalFileName1, fourcc, 20.0, (320, 240), 0)
+out_thermal2= cv2.VideoWriter(thermalFileName2, fourcc, 20.0, (320, 240), 0)
+out_thermal3= cv2.VideoWriter(thermalFileName3, fourcc, 20.0, (320, 240), 0)
+num_frames=0
+
+cv2.namedWindow("Thermal1")
+cv2.moveWindow("Thermal1",500,500)
+
+cv2.namedWindow("Thermal2")
+cv2.moveWindow("Thermal2",800,500)
+
+cv2.namedWindow("Thermal3")
+cv2.moveWindow("Thermal3",1100,500)
+
+#f= open('raw-data/2017-3-5_17-51-18-thermal.dat', 'r')
+with open(motherFile, 'r') as f:
+#for i in range(50):
+    while True:
+        frame= np.load(f)
+        if frame[0][0][0]==0:
+            print "reached EOF probably"
+            #frame.shape not (60, 80, 1):
+            break
+        print(frame.shape)
+        print(frame[0][0][0])
+
+
+        '''
+        cv2.normalize(frame, frame, 0, 65535, cv2.NORM_MINMAX)
+        np.right_shift(frame, 8, frame)
+        img = np.uint8(frame)
+        largerThermal2 = cv2.flip(img, 0)
+        largerThermal = cv2.resize(largerThermal2, (320, 240))
+        '''
+        myMin=8150
+        myMax=myMin+255
+        #try normalizing with arbitrary min, max values
+        x= np.clip(frame, myMin, myMax)
+        y = (x-myMin)
+        z= y.astype(int)
+        img2 = np.uint8(z)
+        print(img2[0][0][0])                        
+        img = cv2.flip(img2, 0)
+        img = cv2.resize(img, (320, 240))        
+        out_thermal1.write(img)       
+        cv2.imshow("Thermal1", img)
+
+
+        myMin=myMin-122 #changed...122 255
+        myMax=myMin+255
+        #try normalizing with arbitrary min, max values
+        x= np.clip(frame, myMin, myMax)
+        y = (x-myMin)
+        z= y.astype(int)
+        img2 = np.uint8(z)
+        print(img2[0][0][0])                        
+        img = cv2.flip(img2, 0)
+        img = cv2.resize(img, (320, 240))        
+        out_thermal2.write(img)       
+        cv2.imshow("Thermal2", img)
+
+
+        myMin=myMin-255 #-255
+        myMax=myMin+255
+        #try normalizing with arbitrary min, max values
+        x= np.clip(frame, myMin, myMax)
+        y = (x-myMin)
+        z= y.astype(int)
+        img2 = np.uint8(z)
+        print(img2[0][0][0])                        
+        img = cv2.flip(img2, 0)
+        img = cv2.resize(img, (320, 240))        
+        out_thermal3.write(img)       
+        cv2.imshow("Thermal3", img)
+
+        
+        key = cv2.waitKey(5) 
+        if key == 27:
+            break
+
+f.close()
+cv2.destroyAllWindows()
+out_thermal1.release()
+out_thermal2.release()
+out_thermal3.release()
+

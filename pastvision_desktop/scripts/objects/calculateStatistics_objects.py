@@ -1,0 +1,233 @@
+#!/usr/bin/env python
+
+#Copyright 2017 Martin Cooney
+#This file is subject to the terms and conditions defined in file 'Readme.md', which is part of this source code package.
+
+import numpy as np
+import cv2
+from subprocess import call
+import sys
+import math
+
+#--------------------------------------------------------
+# Setup
+#--------------------------------------------------------
+
+#Some default alignment parameters for the default dataset of touching objects: 
+#(please replace these with your own parameters if using different data)
+shiftx = 38
+shifty = 0
+zoomFactorX = 0
+zoomFactorY = 20
+alpha = 0.7
+shiftUp = 60
+
+#Object parameters 
+#For the dataset the following five items were used:
+#(please change if you use different data)
+groundTruthObjects = [ ]
+groundTruthLocations = [ ]
+groundTruthObjects.append("PET bottle")
+groundTruthObjects.append("ceramic cup")
+groundTruthObjects.append("paper box")
+groundTruthObjects.append("HDPE bottle")
+groundTruthObjects.append("glass")
+groundTruthLocations.append((227, 205))
+groundTruthLocations.append((192, 207))
+groundTruthLocations.append((153, 197))
+groundTruthLocations.append((118, 182))
+groundTruthLocations.append((77, 199))
+
+#Detection parameters
+PADDING_PARAMETER = 0.35 	#used to remove part of the bounding boxes of detected objects, which often are rough and contain background along the perimeters
+SD_THRESHOLD = 10		#used to detect if an object has varied temperature, which could be the result of a touch 
+INTENSITY_THRESHOLD = 20	#used to select the lighter (warmest) part within a bounding box
+AREA_THRESHOLD = 10		#used to remove small dots of noise
+APPROXIMATION_THRESHOLD = 0.03	#used for approximating the shape of touches to compute the surface to area ratio
+SURFACE_AREA_THRESHOLD = 0.6	#used to remove long thin noise along the outlines of objects (from reflections or warm/cold backgrounds)
+
+#Other parameters
+width = 320
+height = 240
+
+#get passed arguments and select filenames:
+#please change these as needed to match where folders are on your system
+basename = sys.argv[0] 
+beforeBaseName = sys.argv[1] 
+conditionName = sys.argv[2] 
+correctAnswer = int (sys.argv[3])
+rgbFileName1 = "%s/%s_rgb.jpg" % (basename, beforeBaseName)
+thermalFileName1 = "%s/%s_thermal_obj.jpg" % (basename, beforeBaseName)
+thermalFileName2 = "%s/%s_thermal.jpg" % (basename, beforeBaseName)
+shifted_RGB_filename = '../../data/objects/my_rgb_shifted.jpg'
+objectDetectionResults_filename = '../../output/object_detection_results.txt'
+darknetFolder = '../../../../darknet/'
+outputLogFileName = '../../output/%s_resultsLogFile.dat' % conditionName
+outputImageFilename = "../../data/objects/output/out_%s.jpg" % beforeBaseName
+
+#read in images to process
+image_rgb = cv2.imread(rgbFileName1)
+image_rgb = cv2.resize(image_rgb, (width, height)) 
+image_thermal = cv2.imread(thermalFileName1)
+image_thermal = cv2.resize(image_thermal, (width, height)) 
+
+#align mask and rgb for both before and after
+shifted_rgb = image_rgb[shifty+zoomFactorY:240-zoomFactorY, 0+zoomFactorX:320-shiftx-zoomFactorX]
+shifted_rgb = cv2.resize(shifted_rgb, (width, height))
+shifted_thermal = image_thermal[0+shiftUp:240-shifty, shiftx:320]
+shifted_thermal = cv2.resize(shifted_thermal, (width, height)) 
+
+#to store predictions
+touchedItems = [ ]
+
+print ""
+print "= Detect object touches in a single frame (MAY 2017) ="
+print beforeBaseName
+
+#--------------------------------------------------------
+# Detect objects
+#--------------------------------------------------------
+
+#Call YOLO/Darknet
+
+cv2.imwrite(shifted_RGB_filename, shifted_rgb)
+yoloCommand = "%sdarknet detect %scfg/yolo.cfg %syolo.weights %s" % (darknetFolder, darknetFolder, darknetFolder, shifted_RGB_filename)
+call(yoloCommand, shell=True)
+
+#read in the object detection results file, which describes every object in 6 lines
+f = open(objectDetectionResults_filename, 'r') 
+l = list(f)
+f.close()
+totalLines = len(l)
+numberOfObjects = totalLines/6
+objectNames = []
+boxCentroids = []
+boxSizes = []
+
+
+print "Detected", numberOfObjects, "objects"
+
+for currentObjectIndex in range(numberOfObjects):
+	objectLabel = l[currentObjectIndex*6].rstrip()
+	guessProb = l[currentObjectIndex*6+1].rstrip()
+	centerX = float(l[currentObjectIndex*6+2])
+	centerY = float(l[currentObjectIndex*6+3])
+	sizeX = float(l[currentObjectIndex*6+4])
+	sizeY = float(l[currentObjectIndex*6+5])
+
+	objectNames.append(objectLabel) 
+	boxCentroids.append([centerX, centerY]) 
+        boxSizes.append([sizeX, sizeY]) 
+
+
+#--------------------------------------------------------
+# Detect touches in the object regions
+#--------------------------------------------------------
+
+#make mask image from bounding boxes
+gray_therm = cv2.cvtColor(shifted_thermal, cv2.COLOR_BGR2GRAY)
+for currentObjectIndex in range(len(boxCentroids)):
+	currentObj = objectNames[currentObjectIndex]
+	if currentObj != "person" and currentObj != "diningtable" and currentObj != "chair" and currentObj != "sofa":
+
+		centerX = boxCentroids[currentObjectIndex][0]
+		centerY = boxCentroids[currentObjectIndex][1]
+		sizeX = boxSizes[currentObjectIndex][0]
+		sizeY = boxSizes[currentObjectIndex][1]
+
+		p1_x = int((centerX-(sizeX/2))*width)
+		p1_y = int((centerY-(sizeY/2))*height)
+		p2_x = int((centerX+(sizeX/2))*width)
+		p2_y = int((centerY+(sizeY/2))*height)
+
+		boundingBoxRegion = gray_therm[p1_y:p2_y, p1_x:p2_x]
+		reducedBoundingBoxRegion = boundingBoxRegion.copy()
+		cv2.rectangle(reducedBoundingBoxRegion, (0, 0), ((p2_x-p1_x), (p2_y- p1_y)), 0, thickness=10)
+		cv2.rectangle(reducedBoundingBoxRegion, (0, 0), ((p2_x-p1_x), int(float(p2_y-p1_y) * PADDING_PARAMETER)), 0, thickness=-1)
+
+		ret1, thresholdedImage1 = cv2.threshold(reducedBoundingBoxRegion, 2, 255, cv2.THRESH_BINARY)
+		(means, stds) = cv2.meanStdDev(reducedBoundingBoxRegion, mask = thresholdedImage1)
+
+		print currentObj, " Mean: ", means[0][0], " SD: ", stds[0][0]
+
+		if stds[0][0] > SD_THRESHOLD:
+			print "  SD high. Possibly a touch."
+			ret2, thresholdedImage2 = cv2.threshold(reducedBoundingBoxRegion, (means[0][0] + INTENSITY_THRESHOLD), 255, cv2.THRESH_BINARY) 
+			#(_, cnts, _) = cv2.findContours(thresholdedImage2.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE) 		#use this line for OPENCV 3...
+			(cnts, _) = cv2.findContours(thresholdedImage2.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)		#use this line for OPENCV 2.4
+			if len(cnts) > 0:
+				for cnt in cnts:
+					theArea = cv2.contourArea(cnt)
+					print "  Area: ", theArea
+					if theArea > AREA_THRESHOLD: 
+						# approximate the contour
+						peri = cv2.arcLength(cnt, True)
+						approx = cv2.approxPolyDP(cnt, APPROXIMATION_THRESHOLD * peri, True)
+						surfaceToArea = peri/theArea
+ 						print "  Surface to area ratio: ", surfaceToArea 
+						if surfaceToArea < SURFACE_AREA_THRESHOLD:
+							print "  Touch predicted."
+
+							#draw the touch contour
+							boundingBoxRegion_rgb2 = shifted_rgb[p1_y:p2_y, p1_x:p2_x]
+							cv2.drawContours(boundingBoxRegion_rgb2, [cnt], -1, 255, -1)
+							shifted_rgb[p1_y:p2_y, p1_x:p2_x] = boundingBoxRegion_rgb2
+
+							#find the centroid of the touch and draw
+							mom = cv2.moments(cnt)
+							centroid_x = int(mom['m10']/mom['m00'])
+							centroid_y = int(mom['m01']/mom['m00'])
+							centroid_x = centroid_x + p1_x
+							centroid_y = centroid_y + p1_y
+							cv2.circle(shifted_rgb, (centroid_x, centroid_y), 3, (0, 0, 255))
+
+							#find closest box centroid
+							minDistance = 9999.9
+							closestObjectId = -1
+							for anObjectIndex in range(len(groundTruthLocations)):
+								anObject = groundTruthObjects[anObjectIndex]
+								if anObject == "person" or anObject == "diningtable" or anObject == "chair" or anObject == "sofa":
+									continue
+
+								c_x = groundTruthLocations[anObjectIndex][0]
+								c_y = groundTruthLocations[anObjectIndex][1]
+								cv2.circle(shifted_rgb, (c_x, c_y), 3, (0, 255, 0))
+
+								currentDistance = math.sqrt((centroid_x - c_x)*(centroid_x - c_x) + (centroid_y - c_y)*(centroid_y - c_y))
+
+								if currentDistance < minDistance:
+									minDistance = currentDistance
+									closestObjectId = anObjectIndex
+
+							print "  Closest Object Id: ", closestObjectId
+							print "  Object Name: ", groundTruthObjects[closestObjectId]
+
+							cv2.putText(shifted_rgb, groundTruthObjects[closestObjectId], (10, 20), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (0, 0, 0))
+							touchedItems.append(closestObjectId)
+
+						else:
+							print "  Shape not round. Probably not a touch."
+					else:
+						print "  Small area. Probably not a touch."
+
+resultsLogFile = open(outputLogFileName, 'a')
+
+#--------------------------------------------------------
+# Output results
+#--------------------------------------------------------
+
+if len(touchedItems) == 1:
+	print "one touch detected" 
+	lineToWrite = "%s %d %d \n" % (beforeBaseName, correctAnswer, touchedItems[0]+1)
+	resultsLogFile.write(lineToWrite)
+else: #if no touches or multiple touches detected, output -1 and show the array
+	print "No touches or multiple touches detected" 
+	lineToWrite = "%s %d -1 %s \n" % (beforeBaseName, correctAnswer, touchedItems)
+	resultsLogFile.write(lineToWrite)
+
+resultsLogFile.close()
+
+cv2.imwrite(outputImageFilename, shifted_rgb)
+print ""
+
+

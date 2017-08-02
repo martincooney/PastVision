@@ -1,0 +1,33 @@
+import numpy as np
+import cv2
+import rospy
+
+def talker():
+	cap=cv2.VideoCapture("data/erina-thermal.avi")
+	video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+	print video_length
+
+	currentFrame=0
+
+	while(cap.isOpened()):
+		currentFrame=currentFrame+1
+		ret, frame = cap.read()
+		if not frame is None:
+			cv2.imshow('frame', frame)	
+			if currentFrame == 240:
+				cv2.imwrite("lastFrame_thermal.jpg", frame)
+
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
+
+
+	cap.release()
+	cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    try:
+        talker()
+    except rospy.ROSInterruptException:
+        pass
+

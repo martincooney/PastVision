@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+
+#Copyright 2017 Martin Cooney
+#This file is subject to the terms and conditions defined in file 'Readme.md', which is part of this source code package.
+
+import sys
+
+print ""
+print "--------------------------------------------------------------------------"
+print "= Extract frames at various times for a person drinking water (MAY 2017) ="
+print "--------------------------------------------------------------------------"
+print ""
+
+sys.argv=['../../data/mouth/tepid', 'tepid1', '206', '263', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+
+
+#uncomment the lines below to process the whole dataset
+'''
+sys.argv=['../../data/mouth/tepid', 'tepid2', '729', '775', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/tepid', 'tepid3', '1245', '1298', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/tepid', 'tepid4', '1757', '1826', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/tepid', 'tepid5', '2326', '2373', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+
+sys.argv=['../../data/mouth/cold', 'cold1', '187', '330', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/cold', 'cold2', '1328', '1385', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/cold', 'cold3', '2356', '2421', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/cold', 'cold4', '3372', '3448', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+sys.argv=['../../data/mouth/cold', 'cold5', '4417', '4470', 'mouth']
+execfile("../basic/getFramesFromVideoAtTimeIntervals.py")
+'''

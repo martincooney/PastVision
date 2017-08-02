@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+import cv2
+import numpy as np
+import datetime
+import re
+import sys
+
+cv2.namedWindow('thermal_obj')
+cv2.namedWindow('thermal')
+cv2.namedWindow('frame')
+
+cv2.moveWindow('thermal_obj', 180, 100)
+cv2.moveWindow('thermal', 500, 100)
+cv2.moveWindow('frame', 820, 100)
+
+
+
+def writeFrameToImage(markerText, extraText):
+	filename = "../../data/%s/cropped2/%s_%s_rgb.jpg" % (folderName, markerText, extraText)
+	cv2.imwrite(filename, frame)
+	filename = "../../data/%s/cropped2/%s_%s_thermal.jpg" % (folderName, markerText, extraText)
+	cv2.imwrite(filename, frame_thermal)
+	filename = "../../data/%s/cropped2/%s_%s_thermal_obj.jpg" % (folderName, markerText, extraText)
+	cv2.imwrite(filename, frame_thermal_obj)
+
+
+width=320
+height=240
+print sys.argv
+
+basename = sys.argv[0] #"data/5-6/cold" #tepid cold5 touch_materials
+markerText = sys.argv[1] #"cold1"
+thermalFileName = "%s-thermal1.avi" % basename #CHANGED!
+thermalFileName_obj = "%s-thermal2.avi" % basename #CHANGED!
+rgbFileName = "%s-rgb.avi" % basename
+timesFileName = "%s-times.dat" % basename
+#stitched/videos/4_justtop_2017-3-4_10-2-46-rgb.avi martin-rgb.avi
+#stitched/videos/4_justtop_2017-3-4_10-2-46-thermal.avi 
+cap=cv2.VideoCapture(rgbFileName)
+cap_thermal=cv2.VideoCapture(thermalFileName)
+cap_thermal_obj=cv2.VideoCapture(thermalFileName_obj)
+video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+print video_length
+fps = cap.get(cv2.CAP_PROP_FPS)
+print fps
+currentFrame=0
+
+printedFrame=0
+
+beforeFrame = int(sys.argv[2])
+startFrame = int(sys.argv[3]) # 330
+
+folderName = sys.argv[4]
+
+with open(timesFileName, 'r') as f:
+	data=list(f)
+	myList= re.split('_|-| ', data[startFrame])
+	startTime= ((long(myList[1]) * 3600000) + (long(myList[2]) * 60000) +  (long(myList[3]) * 1000) + (long(myList[4])/1000) )
+	#startTime= ((int(myList[1]) * 3600000) + (int(myList[2]) * 60000) +  (int(myList[3]) * 1000) + (int(myList[4])/1000) )
+	print "startTime ", startTime    
+	#time_elapsed = time2-time1
+
+#timeAfter5s=startTime  + 30000
+#timeAfter10s=startTime  + 60000 #10000
+#timeAfter15s=startTime  + 90000 #15000
+
+#nextFrameAfter5s=-1
+#nextFrameAfter10s=-1
+#nextFrameAfter15s=-1
+
+timesToGet = [ ]
+framesToGet = [ ]
+
+stepSize=4
+
+framesToGet.append(beforeFrame)
+framesToGet.append(beforeFrame+stepSize)
+framesToGet.append(beforeFrame+(2*stepSize))
+
+framesToGet.append(startFrame)
+framesToGet.append(startFrame+stepSize)
+framesToGet.append(startFrame+(2*stepSize))
+
+timesToGet.append(startTime  + 5000)
+timesToGet.append(startTime  + 10000)
+timesToGet.append(startTime  + 15000)
+timesToGet.append(startTime  + 30000)
+timesToGet.append(startTime  + 60000)
+timesToGet.append(startTime  + 90000)
+
+currentTarget=0
+
+for frameIndex in range(startFrame,len(data)):
+	myList= re.split('_|-| ', data[frameIndex])
+    	aTime= ((long(myList[1]) * 3600000) + (long(myList[2]) * 60000) +  (long(myList[3]) * 1000) + (long(myList[4])/1000) )
+	aTime= ((int(myList[1]) * 3600000) + (int(myList[2]) * 60000) +  (int(myList[3]) * 1000) + (int(myList[4])/1000) )
+
+	if aTime > int(timesToGet[currentTarget]):
+		framesToGet.append(frameIndex) 
+		framesToGet.append(frameIndex+stepSize)
+		framesToGet.append(frameIndex+(2*stepSize))
+		currentTarget=currentTarget+1
+		if(currentTarget==len(timesToGet)):
+			print "broke here"
+			break
+
+for frameIndex in range(len(framesToGet)):
+	print framesToGet[frameIndex]
+
+
+#currentImage=0
+currentTarget=0
+while(cap.isOpened() and cap_thermal.isOpened()):
+
+	ret, frame = cap.read()
+	ret, frame_thermal = cap_thermal.read()
+	ret, frame_thermal_obj = cap_thermal_obj.read()
+	if not (frame is None or frame_thermal is None or frame_thermal_obj is None):
+		currentFrame=currentFrame+1
+		#print currentFrame
+
+		if currentFrame==framesToGet[currentTarget]:
+			writeFrameToImage(markerText, str(currentTarget))
+			currentTarget=currentTarget+1
+			if(currentTarget==len(framesToGet)):
+				break
+
+		cv2.imshow('frame', frame)
+		cv2.imshow('thermal', frame_thermal)
+		cv2.imshow('thermal_obj', frame_thermal_obj)
+	key = cv2.waitKey(5)
+	if key == ord('q'):
+		break
+	
+
+cap.release()
+cap_thermal.release()
+cap_thermal_obj.release()
+cv2.destroyAllWindows()
+
+'''
+	if nextFrameAfter5s == -1:
+		if aTime > timeAfter5s:
+			nextFrameAfter5s = frameIndex	
+	elif nextFrameAfter10s == -1:
+		if aTime > timeAfter10s:
+			nextFrameAfter10s = frameIndex	
+	elif nextFrameAfter15s == -1:
+		if aTime > timeAfter15s:
+			nextFrameAfter15s = frameIndex
+			break	
+'''
+

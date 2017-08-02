@@ -1,0 +1,308 @@
+import numpy as np
+import cv2
+import rospy
+from std_msgs.msg import String
+
+imageProcessed=0
+
+objectNames=[]
+boxCentroids= []
+boxSizes = []
+width=320
+height=240
+
+fourcc = cv2.cv.CV_FOURCC(*'XVID') 
+#fourcc = cv2.VideoWriter_fourcc(*'XVID')
+fn="../../../devel/lib/pastvision/detectingFacesAndObjects.avi"
+out=cv2.VideoWriter(fn, fourcc, 20.0, (320, 240))
+
+
+
+def readInFaceLandmarks(originalImage):
+
+	global out
+
+	imageWithFacesDrawn = originalImage.copy()
+
+	#read in output file
+	f=open('../../../devel/lib/pastvision/faceLandmarks.txt', 'r')
+	l=list(f)
+	f.close()
+	print(len(l))
+	if len(l) == 73:
+		inner_lips=[]
+		num_of_faces = l[0].rstrip()
+
+		face_left= l[1].rstrip()
+		face_top = l[2].rstrip()
+		face_right = l[3].rstrip()
+		face_bottom = l[4].rstrip()
+
+		for pointIndex in range(4,72):#19
+			lip_inner1 = l[1+pointIndex].rstrip()
+			lip_inner1b = lip_inner1.split()
+			lip_inner1b_x = lip_inner1b[0]
+			lip_inner1b_y = lip_inner1b[1]
+			lip_inner1b_x = lip_inner1b_x.replace('(', '').replace(')', '').replace(',', '')
+			lip_inner1b_y = lip_inner1b_y.replace('(', '').replace(')', '').replace(',', '')
+
+			inner_lips.append((int(lip_inner1b_x)/2, int(lip_inner1b_y)/2))
+
+		L=[]
+		#outer lip, used to be 0, 11
+		start=48
+		end=60
+		for pointIndex in range(start, end):
+			L.append(inner_lips[pointIndex])
+		''''''
+		#next step is to turn this list into an opencv contour somehow
+		cnt = np.array(L).reshape((-1,1,2)).astype(np.int32)
+		imgray = cv2.cvtColor(originalImage,cv2.COLOR_BGR2GRAY)
+		cv2.drawContours(imgray,[cnt],0,255,-1)
+		#mask = np.zeros(imgray.shape,np.uint8)
+		#cv2.drawContours(mask,[cnt],0,255,-1)
+		areaOfOuterMouth = cv2.contourArea(cnt)
+		print "areaOfOuterMouth ", areaOfOuterMouth 
+
+
+		#needed above?
+
+		#draw face outline
+		start=0
+		end=16
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+
+		#draw eyebrows
+		start=17
+		end=21
+		#start=0
+		#end=11
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+
+		start=22
+		end=26
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+
+		#draw nose
+		start=27 #vertical line of nose
+		end=30
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+	
+		start=31 #bottom part of nose
+		end=35
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		''''''
+
+
+		#draw eyes
+		start=36
+		end=41
+		#start=0
+		#end=11
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		cv2.line(imageWithFacesDrawn, inner_lips[end], inner_lips[start], (0, 255, 0))
+
+		start=42
+		end=47
+		#start=0
+		#end=11
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		cv2.line(imageWithFacesDrawn, inner_lips[end], inner_lips[start], (0, 255, 0))
+	
+		#draw outer lips
+		start=48
+		end=60
+		#start=0
+		#end=11
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		cv2.line(imageWithFacesDrawn, inner_lips[end], inner_lips[start], (255, 0, 0))
+
+		#draw inner lips
+		start=60
+		end=67
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		#cv2.line(image_thermal, inner_lips[end], inner_lips[start], (255, 0, 0))
+		
+		#draw my new area
+		start=7
+		end=10
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		start=55
+		end=59
+		for pointIndex in range(start, end):
+			cv2.line(imageWithFacesDrawn, inner_lips[pointIndex], inner_lips[pointIndex+1], (0, 255, 0))
+		cv2.line(imageWithFacesDrawn, inner_lips[7], inner_lips[58], (255, 255, 0))
+		cv2.line(imageWithFacesDrawn, inner_lips[9], inner_lips[55], (255, 255, 0))
+		
+		colorToUse = (0,255, 0)
+		#draw face rectangles
+		cv2.rectangle(imageWithFacesDrawn, (int(face_left)/2, int(face_top)/2), (int(face_right)/2, int(face_bottom)/2), colorToUse, thickness=2)
+
+	#cv2.imwrite("../../../devel/lib/pastvision/imageWithFacesDrawn.jpg", imageWithFacesDrawn)
+	out.write(imageWithFacesDrawn)
+
+
+
+def readInBoundingBoxInfo():
+	global objectNames
+	global boxCentroids
+	global boxSizes 
+
+	#read in file
+	f=open('../../../devel/lib/pastvision/objectInformation.txt', 'r')
+	l=list(f)
+	f.close()
+	#print("hello\n")
+	print(len(l))
+	#for every result, 6 
+	totalLines=len(l)
+	numberOfObjects=totalLines/6
+
+	objectNames=[]
+	boxCentroids= []
+	boxSizes = []
+
+
+
+	for currentObjectIndex in range(numberOfObjects):
+		objectLabel = l[currentObjectIndex*6].rstrip()
+		guessProb = l[currentObjectIndex*6+1].rstrip()
+		centerX = float(l[currentObjectIndex*6+2])
+		centerY= float(l[currentObjectIndex*6+3])
+		sizeX = float(l[currentObjectIndex*6+4])
+		sizeY= float(l[currentObjectIndex*6+5])
+
+		objectNames.append(objectLabel) 
+		boxCentroids.append([centerX, centerY]) 
+        	boxSizes.append([sizeX, sizeY]) 
+
+		print("objectLabel: {}, guessProb: {}, centerX: {} centerY: {}, sizeX: {}, sizeY: {}".format(objectLabel, guessProb, centerX, centerY, sizeX, sizeY))
+
+		'''
+		#draw onto image
+		p1_x = int((centerX-(sizeX/2))*width)
+		p1_y = int((centerY-(sizeY/2))*height)
+		p2_x = int((centerX+(sizeX/2))*width)
+		p2_y = int((centerY+(sizeY/2))*height)
+
+
+		c_x = int((centerX)*width)
+		c_y = int((centerY)*height)
+
+		print("objectLabel: {}, centerX: {} centerY: {}".format(objectLabel, c_x, c_y))	'''
+
+
+	print objectNames
+	print boxCentroids
+	print boxSizes
+
+
+
+def callback(data):
+	global imageProcessed
+	if(data.data=="4"):
+		print("objects detected")
+		imageProcessed=1
+	elif(data.data=="6"):
+		print("faces processed")
+		imageProcessed=1
+#rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+  
+
+
+def talker():
+	global imageProcessed
+	global objectNames
+	global boxCentroids
+	global boxSizes 
+	global width
+	global height
+	rospy.init_node('talker', anonymous=True)
+	pub = rospy.Publisher('chatter', String, queue_size=10)
+	rospy.Subscriber("chatter", String, callback)
+	cap=cv2.VideoCapture("../data/objects/objects1-rgb.avi")#thermal erina-rgb.avi
+	#video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+	#print video_length
+
+        messageToDoObjectDetection = "9"
+        messageToFindFacialLandmarks = "8"
+
+
+	currentFrame=0
+
+	while(cap.isOpened()):
+		currentFrame=currentFrame+1
+		ret, frame = cap.read()
+		if frame is None:
+			break;
+		if not frame is None:
+			cv2.imshow('frame', frame)
+        			
+			if currentFrame > 200 and currentFrame < 230 :
+				cv2.imwrite("../../../devel/lib/pastvision/imageToProcess.jpg", frame)
+				r=rospy.Rate(10)
+				
+				imageProcessed=0
+				pub.publish(messageToDoObjectDetection)
+				
+				while((not rospy.is_shutdown()) and (imageProcessed==0)):
+					r.sleep()
+				''''''	
+
+				imageProcessed=0
+				pub.publish(messageToFindFacialLandmarks)
+				while((not rospy.is_shutdown()) and (imageProcessed==0)):
+					r.sleep()
+
+				
+
+				
+				#boundary box info is now ready
+				readInBoundingBoxInfo()
+				newFrame=frame.copy()
+
+				for currentObjectIndex in range(len(boxCentroids)):
+					currentObj = objectNames[currentObjectIndex]
+					if currentObj != "person" and currentObj != "diningtable" and currentObj != "chair" and currentObj != "sofa":
+
+						centerX = boxCentroids[currentObjectIndex][0]
+						centerY=boxCentroids[currentObjectIndex][1]
+						sizeX=boxSizes[currentObjectIndex][0]
+						sizeY=boxSizes[currentObjectIndex][1]
+
+						p1_x = int((centerX-(sizeX/2))*width)
+						p1_y = int((centerY-(sizeY/2))*height)
+						p2_x = int((centerX+(sizeX/2))*width)
+						p2_y = int((centerY+(sizeY/2))*height)
+
+						cv2.rectangle(newFrame, (p1_x, p1_y), (p2_x, p2_y), 255, thickness=2)
+
+				readInFaceLandmarks(newFrame)
+
+
+				#cv2.imwrite("../../../devel/lib/pastvision/objectsDetected.jpg", newFrame)
+				''''''
+		if cv2.waitKey(1) & 0xFF == ord('q'):
+			break
+
+
+	cap.release()
+	cv2.destroyAllWindows()
+	out.release()
+
+if __name__ == '__main__':
+    try:
+        talker()
+    except rospy.ROSInterruptException:
+        pass
+
