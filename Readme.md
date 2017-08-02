@@ -25,16 +25,16 @@ dlib[4] 		for facial landmark detection 		(e.g., is a person's mouth cool from d
 imutils			helper functions 
 
 Some useful files are:  
-save-thermal-and-rgb-data.py		in /pastvision_rpi/				record raw data using the FLIR thermal camera/Raspberry Pi  
-changeRawThermalToVideos.py		in /pastvision_rpi/				make videos from raw data  
-findShiftParametersForThermalRGB.py 	in /pastvision_desktop/scripts/basic/		find the alignment between RGB and thermal data  
-findFrameNumbers.py 			in /pastvision_desktop/scripts/basic/		find frame numbers when events such as touches occur  
-getAllFrames_objects.py			in /pastvision_desktop/scripts/objects/		extract frames at set time periods from the video  
-getAllDifferences_objects.py 		in /pastvision_desktop/scripts/objects/		detect heat traces on objects  
-processTempResults_objects.py		in /pastvision_desktop/scripts/objects/		analysis of heat trace detection results  
-getAllFrames_mouth.py			in /pastvision_desktop/scripts/mouth/		extract frames at set time periods from the video  
-getAllDifferences_mouth.py 		in /pastvision_desktop/scripts/mouth/		detect heat traces on people's lips  
-processTempResults_mouth.py		in /pastvision_desktop/scripts/mouth/		analysis of heat trace detection results  
+save-thermal-and-rgb-data.py		in /pastvision_rpi/				for recording raw data using the FLIR thermal camera/Raspberry Pi  
+changeRawThermalToVideos.py		in /pastvision_rpi/				for making videos from raw data  
+findShiftParametersForThermalRGB.py 	in /pastvision_desktop/scripts/basic/		for finding the alignment between RGB and thermal data  
+findFrameNumbers.py 			in /pastvision_desktop/scripts/basic/		for find frame numbers when events such as touches occur  
+getAllFrames_objects.py			in /pastvision_desktop/scripts/objects/		for extracting frames at set time periods from the video  
+getAllDifferences_objects.py 		in /pastvision_desktop/scripts/objects/		for detecting heat traces on objects  
+processTempResults_objects.py		in /pastvision_desktop/scripts/objects/		for analysis of heat trace detection results  
+getAllFrames_mouth.py			in /pastvision_desktop/scripts/mouth/		for extracting frames at set time periods from the video  
+getAllDifferences_mouth.py 		in /pastvision_desktop/scripts/mouth/		for detecting heat traces on people's lips  
+processTempResults_mouth.py		in /pastvision_desktop/scripts/mouth/		for analysis of heat trace detection results  
 
 Dataset description:  
 The dataset consists of RGB, thermal, and time stamp data, for touching objects (medicine packages) and drinking water.  
@@ -45,7 +45,7 @@ In the second case, the experimenter drank five times each cold (refrigerated) a
 
 3) Setup
 
-Required Parts
+Required Parts  
     1x FLIR thermal camera kit ("FLiR Dev Kit" KIT-13233 for $259.95, available from sparkfun.com)  
     1x Raspberry Pi (with camera, sd card, cables)  
     1x Desktop for processing (the author used a Ubuntu 14.04 desktop with i5 2400 CPU @ 3.1 GHz)  
@@ -86,29 +86,29 @@ fclose(fp);
 the following line was added to "CMakeLists.txt" in "dlib/examples":  
 "add_gui_example(pastvision_landmark_detection_ex)"  
 And, the following lines were added to  "pastvision_landmark_detection_ex":  
-sprintf(logger_fname, "../../data/mouth/face_landmarks_detected.txt");  
-sprintf(shape_fname, "../../../../dlib/examples/build/martin_data/shape_predictor_68_face_landmarks.dat");  
-sprintf(image_fname, "../../data/mouth/my_rgb_shifted.jpg");  
-fout_logger.open(logger_fname);  
-if(!fout_logger){  
-  std::cout << "problem opening log file\n";  
-  return -1;  
-}  
-. . .  
-fout_logger << dets.size() << "\n";  
-. . .  
-if(shape.num_parts()==68){  
-	fout_logger << dets[j].left() << "\n";  
-	fout_logger << dets[j].top() << "\n";  
-	fout_logger << dets[j].right() << "\n";  
-	fout_logger << dets[j].bottom() << "\n";  
-
-        for (unsigned int k = 0; k < shape.num_parts(); ++k){  
-		fout_logger << shape.part(k) << "\n";  
+	sprintf(logger_fname, "../../data/mouth/face_landmarks_detected.txt");  
+	sprintf(shape_fname, "../../../../dlib/examples/build/martin_data/shape_predictor_68_face_landmarks.dat");  
+	sprintf(image_fname, "../../data/mouth/my_rgb_shifted.jpg");  
+	fout_logger.open(logger_fname);  
+	if(!fout_logger){  
+  		std::cout << "problem opening log file\n";  
+  		return -1;  
 	}  
-}  
-fout_logger.close();
-fout_logger.clear();
+. . .  
+	fout_logger << dets.size() << "\n";  
+. . .  
+	if(shape.num_parts()==68){  
+		fout_logger << dets[j].left() << "\n";  
+		fout_logger << dets[j].top() << "\n";  
+		fout_logger << dets[j].right() << "\n";  
+		fout_logger << dets[j].bottom() << "\n";  
+
+        	for (unsigned int k = 0; k < shape.num_parts(); ++k){  
+			fout_logger << shape.part(k) << "\n";  
+		}  
+	}  
+	fout_logger.close();
+	fout_logger.clear();
 
 -Recompile.  
 For darknet, "cd darknet", "make"  
