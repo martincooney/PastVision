@@ -17,15 +17,15 @@ As noted above, the code in this folder provides tools for thermovisual action i
 This version is initial, comprising the simplest base code; future versions will include richer features.
 
 Programming languages used are Python, C++, and Prolog (for inference).
-Various preexisting libraries and tools used include:
-pylepton		for thermal data acquisition
-OpenCV 3.2.0		for general image processing 		(e.g., whose mouth is cool from drinking?)
-darknet/YOLO9000 v2[3] 	for object detection 			(e.g., has a person touched medicine recently?)
-dlib[4] 		for facial landmark detection 		(e.g., is a person's mouth cool from drinking?)
+Various preexisting libraries and tools used include:  
+pylepton		for thermal data acquisition  
+OpenCV 3.2.0		for general image processing 		(e.g., whose mouth is cool from drinking?)  
+darknet/YOLO9000 v2[3] 	for object detection 			(e.g., has a person touched medicine recently?)  
+dlib[4] 		for facial landmark detection 		(e.g., is a person's mouth cool from drinking?)  
 imutils			helper functions 
 
 Some useful files are:
-save-thermal-and-rgb-data.py		in /pastvision_rpi/				record raw data using the FLIR thermal camera/Raspberry Pi
+save-thermal-and-rgb-data.py		in /pastvision_rpi/				record raw data using the FLIR thermal camera/Raspberry Pi  
 changeRawThermalToVideos.py		in /pastvision_rpi/				make videos from raw data
 findShiftParametersForThermalRGB.py 	in /pastvision_desktop/scripts/basic/		find the alignment between RGB and thermal data
 findFrameNumbers.py 			in /pastvision_desktop/scripts/basic/		find frame numbers when events such as touches occur
